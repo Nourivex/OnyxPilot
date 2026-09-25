@@ -1,4 +1,10 @@
-out/**
-node_modules/**
+.vscode/**
 .vscode-test/**
+src/**
+.gitignore
+**/tsconfig.json
+**/eslint.config.mjs
+**/vitest.config.ts
+**/*.map
+**/*.ts
 *.vsix

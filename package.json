@@ -3,7 +3,8 @@
   "displayName": "OnyxPilot — Local AI Coding Assistant",
   "description": "Selection-based local AI assistant: Audit, Improve, Explain, Create via Ollama / OpenAI-compatible API.",
   "version": "0.1.0",
-  "publisher": "onyx-pilot",
+  "publisher": "nourivex",
+  "author": "Nourivex",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -31,18 +32,19 @@
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "package": "vsce package"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^4.0.0",
     "eslint": "^9.9.0",
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.0.0",
     "vitest": "^2.1.0"
   },
-  "dependencies": {},
   "contributes": {
     "commands": [
       {

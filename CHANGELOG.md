@@ -1,5 +1,19 @@
 # Changelog
 
+## OpenAI-compatible matang (9router) + repo rapi
+
+- Diagnosis 9router lokal: butuh baseURL diakhiri `/v1` + apiKey asli
+  (tanpanya: 404 HTML / 401 Missing API key — terverifikasi via probe)
+- Error 404 kini beri hint `/v1` langsung di pesan error
+- Model picker + sidebar refresh + status koneksi ikut provider aktif
+  (Ollama via `/api/tags`, OpenAI-compatible via `/models` + Bearer)
+- Parser chat fallback ke `reasoning_content` bila `content` kosong
+- Select Model digeneralisasi untuk kedua provider
+- Git: init, branch `main`, commit awal; `publisher`/`author` = nourivex/Nourivex
+- `npm run package` (vsce) → `onyx-pilot-0.1.0.vsix` siap install; `.vscodeignore` diperbaiki
+- README lengkap (ID) + `LICENSE` MIT atas nama Nourivex
+- 4 unit test baru — total 36 hijau
+
 ## Logo sidebar baru
 
 - `resources/onyx.svg` diganti: kotak amber + petir gelap (kontras di theme
