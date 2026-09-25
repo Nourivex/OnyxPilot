@@ -1,0 +1,207 @@
+{
+  "name": "onyx-pilot",
+  "displayName": "OnyxPilot — Local AI Coding Assistant",
+  "description": "Selection-based local AI assistant: Audit, Improve, Explain, Create via Ollama / OpenAI-compatible API.",
+  "version": "0.1.0",
+  "publisher": "onyx-pilot",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/onyx-pilot/onyx-pilot.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "ollama",
+    "code-review",
+    "live-coding"
+  ],
+  "main": "./out/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "eslint": "^9.9.0",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {},
+  "contributes": {
+    "commands": [
+      {
+        "command": "onyxPilot.audit",
+        "title": "Onyx AI: Audit",
+        "category": "Onyx AI"
+      },
+      {
+        "command": "onyxPilot.improve",
+        "title": "Onyx AI: Improve",
+        "category": "Onyx AI"
+      },
+      {
+        "command": "onyxPilot.explain",
+        "title": "Onyx AI: Explain",
+        "category": "Onyx AI"
+      },
+      {
+        "command": "onyxPilot.create",
+        "title": "Onyx AI: Create",
+        "category": "Onyx AI"
+      },
+      {
+        "command": "onyxPilot.selectModel",
+        "title": "Onyx AI: Select Model",
+        "category": "Onyx AI"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "onyxPilot",
+          "title": "Onyx AI",
+          "icon": "resources/onyx.svg"
+        }
+      ]
+    },
+    "views": {
+      "onyxPilot": [
+        {
+          "type": "webview",
+          "id": "onyxPilot.sidebar",
+          "name": "Onyx AI"
+        }
+      ]
+    },
+    "submenus": [
+      {
+        "id": "onyxPilot.editorContext",
+        "label": "⚡ Onyx AI"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "submenu": "onyxPilot.editorContext",
+          "group": "1_modification@1"
+        }
+      ],
+      "onyxPilot.editorContext": [
+        {
+          "command": "onyxPilot.audit",
+          "group": "1_modification@1",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "onyxPilot.improve",
+          "group": "1_modification@2",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "onyxPilot.explain",
+          "group": "1_modification@3",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "onyxPilot.create",
+          "group": "1_modification@4"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "onyxPilot.audit",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "onyxPilot.improve",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "onyxPilot.explain",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "onyxPilot.create"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "OnyxPilot",
+      "properties": {
+        "onyxPilot.provider": {
+          "type": "string",
+          "enum": [
+            "ollama",
+            "openai-compatible"
+          ],
+          "default": "ollama",
+          "description": "Active AI provider."
+        },
+        "onyxPilot.confirmApply": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ask for confirmation before inserting generated code into the editor. Turn off for one-click apply (undo with Ctrl+Z)."
+        },
+        "onyxPilot.ollama.endpoint": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "Ollama API endpoint."
+        },
+        "onyxPilot.ollama.model": {
+          "type": "string",
+          "default": "qwen3:8b",
+          "description": "Ollama model name."
+        },
+        "onyxPilot.ollama.think": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ollama think mode. Set false for direct answers without reasoning (saves tokens, recommended for thinking models)."
+        },
+        "onyxPilot.ollama.temperature": {
+          "type": "number",
+          "default": 0.8,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Sampling temperature (0 = deterministic, 2 = very creative)."
+        },
+        "onyxPilot.ollama.numPredict": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "Max tokens to generate. 0 = Ollama default (unlimited)."
+        },
+        "onyxPilot.openaiCompatible.baseURL": {
+          "type": "string",
+          "default": "http://localhost:11434/v1",
+          "description": "OpenAI-compatible API base URL."
+        },
+        "onyxPilot.openaiCompatible.apiKey": {
+          "type": "string",
+          "default": "ollama",
+          "description": "API key for OpenAI-compatible endpoint."
+        },
+        "onyxPilot.openaiCompatible.model": {
+          "type": "string",
+          "default": "qwen3:8b",
+          "description": "Model name for OpenAI-compatible endpoint."
+        }
+      }
+    }
+  }
+}
