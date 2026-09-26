@@ -5,6 +5,15 @@ import { listOllamaModels, listOpenAIModels } from "../ai/models";
 import { generateWithActiveProvider } from "../ai/index";
 import { buildChatRequest, type ChatTurn } from "../agent/conversation";
 import { buildContextBlock } from "../agent/context-pack";
+import { applyBudget, DEFAULT_BUDGET } from "../project/budget";
+import { pickRelevantFiles } from "../project/relevant";
+import { formatProfile, type ProjectProfile } from "../project/fingerprint";
+import {
+  activeFolder,
+  readProjectFile,
+  scanProject,
+  type ProjectScan
+} from "../project/workspace";
 import { runAudit } from "../commands/audit";
 import { runImprove } from "../commands/improve";
 import { runExplain } from "../commands/explain";
@@ -48,6 +57,7 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
   private loadingModels = false;
   private chat: ChatMessage[] = [];
   private chatBusy = false;
+  private projectCache: { key: string; scan: ProjectScan } | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -69,6 +79,33 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
       this.view = undefined;
     });
     void this.refresh();
+    void this.ensureProject().then(() => this.pushState());
+  }
+
+  /** Scan project (manifest kecil) sekali per folder; cache sampai folder berubah. */
+  private async ensureProject(): Promise<ProjectScan | undefined> {
+    const folder = activeFolder();
+    if (!folder) {
+      return undefined;
+    }
+    const key = folder.uri.toString();
+    if (this.projectCache?.key !== key) {
+      try {
+        this.projectCache = { key, scan: await scanProject(folder) };
+      } catch {
+        return undefined;
+      }
+    }
+    return this.projectCache.scan;
+  }
+
+  /** Dipanggil saat workspace folders berubah. */
+  async rescanProject(): Promise<void> {
+    this.projectCache = undefined;
+    if (this.view) {
+      await this.ensureProject();
+      this.pushState();
+    }
   }
 
   /** Fetch ulang daftar model dari server aktif lalu dorong state ke webview. */
@@ -115,6 +152,8 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
     const temperature = config.get<number>("ollama.temperature", 0.8);
     const numPredict = config.get<number>("ollama.numPredict", 0);
     const ctx = getEditorContext();
+    const profile: ProjectProfile | null =
+      this.projectCache?.scan.profile ?? null;
     this.view.webview.postMessage({
       type: "state",
       provider,
@@ -135,7 +174,8 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
             }
           : null,
       chat: this.chat,
-      chatBusy: this.chatBusy
+      chatBusy: this.chatBusy,
+      project: profile
     });
   }
 
@@ -200,28 +240,54 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  /** Satu putaran chat: bungkus konteks editor → provider → balasan. */
+  /** Satu putaran chat: project + selection + file + related files → provider. */
   private async chatSend(raw: string): Promise<void> {
     const input = raw.trim();
     if (input.length === 0 || this.chatBusy) {
       return;
     }
     const editor = vscode.window.activeTextEditor;
+    const ctx = getEditorContext();
+    const fileName =
+      editor?.document.fileName.split(/[\\/]/).pop() ??
+      editor?.document.fileName ??
+      "";
+    const folder = activeFolder();
+    const scan = await this.ensureProject();
+    const profile = scan?.profile;
+    let related: Array<{ path: string; text: string }> = [];
+    if (folder && scan) {
+      const picked = pickRelevantFiles(
+        scan.candidates,
+        input,
+        fileName,
+        ctx?.selectedCode ?? "",
+        DEFAULT_BUDGET.maxFiles
+      );
+      const rawFiles: Array<{ path: string; text: string }> = [];
+      for (const p of picked) {
+        const text = await readProjectFile(folder, p);
+        if (text !== null && text.trim().length > 0) {
+          rawFiles.push({ path: p, text });
+        }
+      }
+      related = applyBudget(rawFiles).included;
+    }
     const pack = buildContextBlock({
-      selection: getEditorContext() ?? null,
+      selection: ctx ?? null,
       fileText: editor?.document.getText() ?? "",
-      fileName:
-        editor?.document.fileName.split(/[\\/]/).pop() ??
-        editor?.document.fileName ??
-        "",
-      language: editor?.document.languageId ?? ""
+      fileName,
+      language: editor?.document.languageId ?? "",
+      project:
+        profile && profile.detected ? formatProfile(profile) : "",
+      related
     });
     this.chat.push({ role: "user", text: input, contextLabel: pack.label });
     this.chatBusy = true;
     this.pushState();
     try {
       const res = await generateWithActiveProvider(
-        buildChatRequest(this.chat, pack.block, input)
+        buildChatRequest(this.chat.slice(0, -1), pack.block, input)
       );
       this.chat.push({ role: "assistant", text: res.text });
     } catch (err) {
@@ -481,9 +547,12 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
       if (n === s.model) o.selected = true;
       modelEl.appendChild(o);
     }
+    const projLabel = s.project && s.project.detected
+      ? s.project.framework + " • " + s.project.language
+      : (s.provider === "ollama" ? "Ollama" : "OpenAI-compatible");
     if (s.connected === true) {
       dotEl.className = "dot ok";
-      connEl.textContent = (s.provider === "ollama" ? "Ollama" : "OpenAI-compatible") + " • Connected";
+      connEl.textContent = projLabel + " • Connected";
     } else if (s.connected === false) {
       dotEl.className = "dot err";
       connEl.textContent = "Offline";

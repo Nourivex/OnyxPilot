@@ -1,5 +1,20 @@
 # Changelog
 
+## Phase 2: Project Understanding (read-only)
+
+- Fingerprint deterministik dari manifest (Laravel/Express/Next/Nest/Django/
+  FastAPI/Flask/Go/Rust…) — tidak cocok → "Unknown", tidak menebak;
+  header sidebar menampilkan mis. "Laravel • PHP • Connected"
+- Chat kini mengirim: `[Project]` + selection + file aktif + `[Related]`
+  (maks 3 file via keyword scoring + budget 1500 char/file, 4500 total)
+- Security boundary: `.env*`, `*.pem/key`, `node_modules`, `vendor`, `.git`,
+  binary, >100KB, dan luar workspace TIDAK PERNAH dibaca
+- Nol skor relevansi → tidak ada file dikirim (jangan asal kirim)
+- `src/project/`: fingerprint, ignore, budget, relevant (murni + 16 test),
+  workspace.ts tipis; cache per folder, rescan saat folder berubah
+- Terverifikasi di repo sendiri: Node.js • TypeScript + file relevan tepat
+- Total 66 tests hijau
+
 ## Sidebar Chat/Plan/Build (tahap 1: Chat)
 
 - Sidebar jadi 3 tab: **Chat** penuh, Plan/Build kerangka jujur + quick action

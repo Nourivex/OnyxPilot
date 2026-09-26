@@ -22,10 +22,14 @@ Asisten AI coding di dalam VS Code: blok kode → klik kanan → **Onyx AI**
 - **Sidebar Chat/Plan/Build**: tab Chat (tanya jawab + konteks selection/file,
   jawaban Indonesia, read-only tanpa ubah file); tab Plan/Build disiapkan
   untuk Plan engine + Build engine berikutnya
+- **Project Understanding (read-only)**: fingerprint deterministik
+  (Laravel/Express/Django/Go/Rust… atau jujur "Unknown"), related files
+  otomatis + budget (maks 3 file), secrets (`.env`, keys, `node_modules`,
+  `vendor`, `.git`, binary) tidak pernah dibaca
 - **Diff Preview sebelum Apply**: Create/Improve membuka diff native VS Code
   (kiri file asli, kanan hasil AI dalam konteks penuh) → **Apply / Reject**,
   satu undo step
-- **Ngoprek-friendly**: TypeScript strict, ESLint, Vitest (46 tests), rencana di `docs/plans/`
+- **Ngoprek-friendly**: TypeScript strict, ESLint, Vitest (66 tests), rencana di `docs/plans/`
 
 ## Prasyarat
 
@@ -90,7 +94,9 @@ Jalan pintas lain:
 - `Ctrl+Shift+P` → *Onyx AI: Select Model* (ganti model dari daftar live server)
 - Klik **Onyx: `<model>`** di status bar untuk ganti model
 - Sidebar: tab **Chat** untuk tanya jawab (Enter kirim, Shift+Enter baris baru,
-  chip 📎 menunjukkan konteks yang dibaca AI); tab **Plan/Build** segera hadir
+  chip 📎 menunjukkan konteks yang dibaca AI: selection, file, + file terkait);
+  header menampilkan project terdeteksi (mis. "Laravel • PHP");
+  tab **Plan/Build** segera hadir
 
 ## Pengaturan (`Ctrl+,` → ketik *OnyxPilot*)
 

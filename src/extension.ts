@@ -22,6 +22,9 @@ export function activate(context: vscode.ExtensionContext): void {
       runSelectModel()
     ),
     vscode.window.onDidChangeTextEditorSelection(() => sidebar.pushState()),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      void sidebar.rescanProject();
+    }),
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("onyxPilot")) {
         sidebar.pushState();

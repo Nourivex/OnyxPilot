@@ -12,6 +12,9 @@ export interface ChatTurn {
 /** Batas riwayat yang dikirim agar hemat token. */
 export const CHAT_HISTORY_LIMIT = 6;
 
+/** Satu putaran riwayat ikut dipotong agar tak membengkak. */
+export const MAX_HISTORY_TURN_CHARS = 1500;
+
 export function buildChatRequest(
   history: ChatTurn[],
   contextBlock: string,
@@ -19,8 +22,14 @@ export function buildChatRequest(
 ): AIRequest {
   const recent = history.slice(-CHAT_HISTORY_LIMIT);
   const hist = recent
-    .map((t) => `${t.role === "user" ? "User" : "Onyx"}: ${t.text}`)
-    .join("\n\n");
+    .map((t) => {
+      const text =
+        t.text.length > MAX_HISTORY_TURN_CHARS
+          ? t.text.slice(0, MAX_HISTORY_TURN_CHARS) + '\n…[dipotong]'
+          : t.text;
+      return `${t.role === 'user' ? 'User' : 'Onyx'}: ${text}`;
+    })
+    .join('\n\n');
   const parts = [`[Context]\n${contextBlock}`];
   if (hist.length > 0) {
     parts.push(`[History]\n${hist}`);
