@@ -6,6 +6,7 @@
   "publisher": "nourivex",
   "author": "Nourivex",
   "license": "MIT",
+  "icon": "resources/onyx-icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/onyx-pilot/onyx-pilot.git"
@@ -78,7 +79,7 @@
         {
           "id": "onyxPilot",
           "title": "Onyx AI",
-          "icon": "resources/onyx-icon.png"
+          "icon": "resources/onyx-bar.svg"
         }
       ]
     },

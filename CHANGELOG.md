@@ -1,5 +1,14 @@
 # Changelog
 
+## Ikon benar: SVG untuk bar, PNG untuk marketplace
+
+- Root cause ikon: `viewsContainers.activitybar` VS Code hanya menerima SVG —
+  PNG diabaikan (placeholder abu-abu). Struktur dibetulkan:
+  `OnyxPilot.png` (master) → `onyx-icon.png` (top-level `icon`/marketplace) →
+  `onyx-bar.svg` (activity bar: badge heksagon + goggle cyan, terverifikasi gelap/terang)
+- `onyx.svg`/`onyx2.svg` lama dihapus (ada di riwayat git bila perlu)
+- README kini sinkron dengan konfigurasi (aturan SVG-vs-PNG didokumentasikan)
+
 ## Ikon maskot beruang (PNG transparan)
 
 - `resources/OnyxPilot.png` (logo asli) → `resources/onyx-icon.png` 256px:

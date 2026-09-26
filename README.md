@@ -138,11 +138,21 @@ onyx-pilot/
 │   ├── prompts/            # prompt-builder (+ test)
 │   ├── sidebar/            # webview sidebar
 │   └── ui/                 # output-panel, apply, status-bar
-├── resources/onyx.svg      # ikon activity bar (ganti file ini untuk ganti logo)
+├── resources/
+│   ├── OnyxPilot.png      # master: maskot beruang full (jangan dihapus)
+│   ├── onyx-icon.png       # ikon extension/marketplace (transparan, dari master)
+│   └── onyx-bar.svg        # ikon activity bar (SVG sederhana 24px; activity bar wajib SVG, bukan PNG)
 ├── docs/plans/             # rencana Day 1 → Day 8+ dan roadmap v1.0
 ├── CHANGELOG.md
 ├── LICENSE (MIT)
 ```
+
+## Ikon & logo
+
+- Master: `resources/OnyxPilot.png` (maskot beruang full).
+- Butuh ganti logo? Timpa `OnyxPilot.png`, turunkan ulang `onyx-icon.png`
+  (256px, background transparan), dan sederhanakan `onyx-bar.svg` bila bentuk berubah.
+  Aturan: activity bar **wajib SVG** (`viewsContainers`), marketplace memakai PNG (`icon`).
 
 ## Roadmap
 
