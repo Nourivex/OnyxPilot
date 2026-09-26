@@ -6,6 +6,9 @@ Asisten AI coding di dalam VS Code: blok kode → klik kanan → **Onyx AI**
 
 > Prinsip: **AI menghasilkan saran, manusia memutuskan perubahan.**
 > Tidak ada file yang ditimpa tanpa konfirmasi.
+>
+> Aturan konstitusi: tanpa konteks → tanpa generate; konteks kurang → baca dulu
+> baru plan; plan bukan izin mengubah; tulis selalu butuh approval eksplisit.
 
 **Dibuat oleh Nourivex** — Lisensi MIT (lihat `LICENSE`).
 
@@ -20,8 +23,9 @@ Asisten AI coding di dalam VS Code: blok kode → klik kanan → **Onyx AI**
   (`ollama list` / `/models`), tanpa ketik manual
 - **Parameter Ollama manual**: think on/off, temperature, max tokens
 - **Sidebar Chat/Plan/Build**: tab Chat (tanya jawab + konteks selection/file,
-  jawaban Indonesia, read-only tanpa ubah file); tab Plan/Build disiapkan
-  untuk Plan engine + Build engine berikutnya
+  jawaban Indonesia, read-only); tab **Plan** (Goal → sufficiency check →
+  inspect otomatis → plan Goal/State/Files/Steps/Risks/Validation + badge
+  konteks; Build dikunci sampai Phase 4)
 - **Project Understanding (read-only)**: fingerprint deterministik
   (Laravel/Express/Django/Go/Rust… atau jujur "Unknown"), related files
   otomatis + budget (maks 3 file), secrets (`.env`, keys, `node_modules`,
@@ -29,7 +33,7 @@ Asisten AI coding di dalam VS Code: blok kode → klik kanan → **Onyx AI**
 - **Diff Preview sebelum Apply**: Create/Improve membuka diff native VS Code
   (kiri file asli, kanan hasil AI dalam konteks penuh) → **Apply / Reject**,
   satu undo step
-- **Ngoprek-friendly**: TypeScript strict, ESLint, Vitest (66 tests), rencana di `docs/plans/`
+- **Ngoprek-friendly**: TypeScript strict, ESLint, Vitest (73 tests), rencana di `docs/plans/`
 
 ## Prasyarat
 
@@ -93,10 +97,10 @@ Jalan pintas lain:
 
 - `Ctrl+Shift+P` → *Onyx AI: Select Model* (ganti model dari daftar live server)
 - Klik **Onyx: `<model>`** di status bar untuk ganti model
-- Sidebar: tab **Chat** untuk tanya jawab (Enter kirim, Shift+Enter baris baru,
-  chip 📎 menunjukkan konteks yang dibaca AI: selection, file, + file terkait);
-  header menampilkan project terdeteksi (mis. "Laravel • PHP");
-  tab **Plan/Build** segera hadir
+- Sidebar: tab **Chat** untuk tanya jawab (chip 📎: selection, file, + file terkait);
+  tab **Plan**: isi goal → Onyx membaca konteks, cek kecukupan, membaca yang kurang,
+  lalu menyusun plan (badge hijau "Konteks cukup" / merah + daftar yang belum dibaca);
+  header menampilkan project terdeteksi
 
 ## Pengaturan (`Ctrl+,` → ketik *OnyxPilot*)
 

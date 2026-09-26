@@ -8,6 +8,9 @@ import { buildContextBlock } from "../agent/context-pack";
 import { applyBudget, DEFAULT_BUDGET } from "../project/budget";
 import { pickRelevantFiles } from "../project/relevant";
 import { formatProfile, type ProjectProfile } from "../project/fingerprint";
+import { checkSufficiency } from "../plan/sufficiency";
+import { buildPlanRequest, parsePlan } from "../plan/planner";
+import type { Plan } from "../plan/types";
 import {
   activeFolder,
   readProjectFile,
@@ -31,6 +34,8 @@ interface SidebarMessage {
     | "setConfig"
     | "chatSend"
     | "chatClear"
+    | "planBuild"
+    | "planClear"
     | "openSettings";
   action?: ActionId;
   provider?: string;
@@ -38,6 +43,7 @@ interface SidebarMessage {
   key?: string;
   value?: boolean | number;
   text?: string;
+  goal?: string;
 }
 
 export interface ChatMessage extends ChatTurn {
@@ -58,6 +64,13 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
   private chat: ChatMessage[] = [];
   private chatBusy = false;
   private projectCache: { key: string; scan: ProjectScan } | undefined;
+  private plan: {
+    plan: Plan;
+    includedPaths: string[];
+    extraReads: string[];
+  } | null = null;
+  private planBusy = false;
+  private planNotice = "";
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -175,7 +188,10 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
           : null,
       chat: this.chat,
       chatBusy: this.chatBusy,
-      project: profile
+      project: profile,
+      plan: this.plan,
+      planBusy: this.planBusy,
+      planNotice: this.planNotice
     });
   }
 
@@ -229,6 +245,14 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
         break;
       case "chatClear":
         this.chat = [];
+        this.pushState();
+        break;
+      case "planBuild":
+        await this.planBuild(msg.goal ?? "");
+        break;
+      case "planClear":
+        this.plan = null;
+        this.planNotice = "";
         this.pushState();
         break;
       case "openSettings":
@@ -297,6 +321,121 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
       });
     }
     this.chatBusy = false;
+    this.pushState();
+  }
+
+  /** Budget konteks khusus planning (lebih longgar dari chat). */
+  private static readonly PLAN_BUDGET = {
+    maxFiles: 8,
+    maxCharsPerFile: 2000,
+    maxTotalChars: 9000
+  };
+
+  /** Baca + budget daftar path (aman, ignore-checked). */
+  private async readBudgeted(
+    folder: vscode.WorkspaceFolder | undefined,
+    paths: string[]
+  ): Promise<Array<{ path: string; text: string }>> {
+    if (!folder) {
+      return [];
+    }
+    const raw: Array<{ path: string; text: string }> = [];
+    for (const p of paths) {
+      const text = await readProjectFile(folder, p);
+      if (text !== null && text.trim().length > 0) {
+        raw.push({ path: p, text });
+      }
+    }
+    return applyBudget(raw, OnyxSidebarProvider.PLAN_BUDGET).included;
+  }
+
+  /**
+   * Plan Engine v1: konteks → sufficiency → inspect-round (sekali) → plan.
+   * TIDAK mengubah file. Tombol Build sengaja disabled sampai Phase 4.
+   */
+  private async planBuild(goalRaw: string): Promise<void> {
+    const goal = goalRaw.trim();
+    if (goal.length === 0 || this.planBusy) {
+      return;
+    }
+    this.planBusy = true;
+    this.planNotice = "";
+    this.plan = null;
+    this.pushState();
+    try {
+      const folder = activeFolder();
+      const scan = await this.ensureProject();
+      const editor = vscode.window.activeTextEditor;
+      const ctx = getEditorContext();
+      const fileName =
+        editor?.document.fileName.split(/[\\/]/).pop() ??
+        editor?.document.fileName ??
+        "";
+      const candidates = scan?.candidates ?? [];
+      const manifest = candidates.find((p) =>
+        /^(composer\.json|package\.json|go\.mod|Cargo\.toml)$/.test(p)
+      );
+      const picked = pickRelevantFiles(
+        candidates,
+        goal,
+        fileName,
+        ctx?.selectedCode ?? "",
+        6
+      ).filter((p) => p !== manifest);
+      const ordered = [...(manifest ? [manifest] : []), ...picked];
+      let included = await this.readBudgeted(folder, ordered);
+      let suff = checkSufficiency(
+        goal,
+        included.map((i) => i.path),
+        candidates
+      );
+      // Inspect-round: baca yang kurang (sekali), lalu cek ulang.
+      let extraReads: string[] = [];
+      if (suff.confidence === "insufficient" && folder) {
+        const more = await this.readBudgeted(
+          folder,
+          suff.missingContext.slice(0, 2)
+        );
+        if (more.length > 0) {
+          extraReads = more.map((m) => m.path);
+          const merged = applyBudget(
+            [...included, ...more],
+            OnyxSidebarProvider.PLAN_BUDGET
+          );
+          included = merged.included;
+          suff = checkSufficiency(
+            goal,
+            included.map((i) => i.path),
+            candidates
+          );
+        }
+      }
+      const profile = scan?.profile;
+      const projectLine =
+        profile && profile.detected ? formatProfile(profile) : "Unknown";
+      const pack = buildContextBlock({
+        selection: ctx ?? null,
+        fileText: editor?.document.getText() ?? "",
+        fileName,
+        language: editor?.document.languageId ?? "",
+        project: projectLine,
+        related: included
+      });
+      const res = await generateWithActiveProvider(
+        buildPlanRequest(projectLine, goal, pack.block)
+      );
+      const plan = parsePlan(res.text, goal);
+      plan.confidence = suff.confidence;
+      plan.missingContext = suff.missingContext;
+      this.plan = {
+        plan,
+        includedPaths: included.map((i) => i.path),
+        extraReads
+      };
+    } catch (err) {
+      this.planNotice = `Gagal menyusun plan: ${err instanceof Error ? err.message : String(err)}`;
+    }
+    this.planBusy = false;
     this.pushState();
   }
 
@@ -387,6 +526,20 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
   input[type="number"] { background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; padding: 6px; box-sizing: border-box; }
   .link { background: none; border: none; color: var(--vscode-textLink-foreground); cursor: pointer; padding: 4px 0; text-align: left; }
   .empty { opacity: .7; font-size: 12px; text-align: center; margin: auto 0; }
+  #goal { width: 100%; box-sizing: border-box; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-dropdown-border)); border-radius: 4px; padding: 6px; resize: none; font-family: inherit; font-size: 12px; }
+  .badge { display: inline-block; font-size: 11px; border-radius: 10px; padding: 2px 10px; margin-bottom: 6px; }
+  .badge.ok { background: var(--vscode-testing-iconPassed, #4caf50); color: #fff; }
+  .badge.warn { background: var(--vscode-testing-iconFailed, #f44336); color: #fff; }
+  .plansec { margin-bottom: 8px; }
+  .plansec .body { font-size: 12px; }
+  .filerow { display: flex; gap: 6px; align-items: baseline; font-size: 12px; margin-bottom: 4px; }
+  .filerow code { flex: 1; word-break: break-all; }
+  .act { flex: none; font-size: 10px; text-transform: uppercase; border: 1px solid var(--vscode-panel-border); border-radius: 8px; padding: 0 6px; opacity: .9; }
+  .act-modify { color: var(--vscode-testing-iconFailed, #f44336); }
+  .act-create { color: var(--vscode-testing-iconPassed, #4caf50); }
+  ol.plan, ul.plan { margin: 4px 0 4px 18px; padding: 0; font-size: 12px; }
+  ol.plan li, ul.plan li { margin-bottom: 3px; }
+  button:disabled { opacity: .45; cursor: default; }
 </style>
 </head>
 <body>
@@ -415,11 +568,12 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
 
   <div id="view-plan" class="view">
     <div class="card">
-      <div class="label">Plan engine — segera</div>
-      <div>Susun rencana multi-file (goal → context → steps → tests) sebelum Build dijalankan. Sementara itu:</div>
-      <div class="rowbtns"><button data-action="audit">🔍 Audit selection</button></div>
-      <div class="hint">Audit memakai Diff Preview bila ada usulan kode.</div>
+      <div class="label">Goal</div>
+      <textarea id="goal" rows="2" placeholder="cth: Tambahkan role admin ke authentication"></textarea>
+      <div class="rowbtns"><button id="makeplan">Buat Plan</button></div>
+      <div id="plannotice" class="hint"></div>
     </div>
+    <div id="planout"></div>
   </div>
 
   <div id="view-build" class="view">
@@ -570,6 +724,7 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
       : "Tidak ada selection";
     refreshBtn.disabled = s.loadingModels;
     renderChat(s.chat || [], s.chatBusy);
+    renderPlan(s.plan || null, !!s.planBusy, s.planNotice || "");
   });
 
   function send() {
@@ -578,11 +733,137 @@ export class OnyxSidebarProvider implements vscode.WebviewViewProvider {
     inputEl.value = "";
     vscode.postMessage({ type: "chatSend", text: v });
   }
+
+  function section(parent, label, lines, ordered) {
+    if (!lines || lines.length === 0) return;
+    const sec = document.createElement("div");
+    sec.className = "plansec";
+    const h = document.createElement("div");
+    h.className = "label";
+    h.textContent = label;
+    sec.appendChild(h);
+    const list = document.createElement(ordered ? "ol" : "ul");
+    list.className = "plan";
+    for (const t of lines) {
+      const li = document.createElement("li");
+      li.textContent = typeof t === "string" ? t : (t.title || t.text || "");
+      list.appendChild(li);
+    }
+    sec.appendChild(list);
+    parent.appendChild(sec);
+  }
+
+  function renderPlan(pv, busy, notice) {
+    $("plannotice").textContent = notice || "";
+    $("makeplan").disabled = busy;
+    const out = $("planout");
+    out.textContent = "";
+    if (busy) {
+      const d = document.createElement("div");
+      d.className = "card";
+      d.textContent = "Menyusun plan… (baca konteks → cek cukup → minta AI)";
+      out.appendChild(d);
+      return;
+    }
+    if (!pv) return;
+    const p = pv.plan;
+    const card = document.createElement("div");
+    card.className = "card";
+    const badge = document.createElement("div");
+    badge.className = "badge " + (p.confidence === "sufficient" ? "ok" : "warn");
+    badge.textContent = p.confidence === "sufficient" ? "Konteks cukup" : "Konteks belum cukup";
+    card.appendChild(badge);
+    if (p.missingContext && p.missingContext.length > 0) {
+      const miss = document.createElement("div");
+      miss.className = "hint";
+      miss.textContent = "Belum dibaca: " + p.missingContext.join(", ");
+      card.appendChild(miss);
+    }
+    if (pv.extraReads && pv.extraReads.length > 0) {
+      const ex = document.createElement("div");
+      ex.className = "hint";
+      ex.textContent = "Dibaca otomatis: " + pv.extraReads.join(", ");
+      card.appendChild(ex);
+    }
+    const goal = document.createElement("div");
+    goal.className = "plansec";
+    const gl = document.createElement("div");
+    gl.className = "label";
+    gl.textContent = "Goal";
+    goal.appendChild(gl);
+    const gb = document.createElement("div");
+    gb.className = "body";
+    gb.textContent = p.goal;
+    goal.appendChild(gb);
+    card.appendChild(goal);
+    if (p.currentState) {
+      const cs = document.createElement("div");
+      cs.className = "plansec";
+      const cl = document.createElement("div");
+      cl.className = "label";
+      cl.textContent = "Current state";
+      cs.appendChild(cl);
+      const cb = document.createElement("div");
+      cb.className = "body";
+      cb.textContent = p.currentState;
+      cs.appendChild(cb);
+      card.appendChild(cs);
+    }
+    if (p.files && p.files.length > 0) {
+      const fs = document.createElement("div");
+      fs.className = "plansec";
+      const fl = document.createElement("div");
+      fl.className = "label";
+      fl.textContent = "Files";
+      fs.appendChild(fl);
+      for (const f of p.files) {
+        const row = document.createElement("div");
+        row.className = "filerow";
+        const code = document.createElement("code");
+        code.textContent = f.path + (f.reason ? " — " + f.reason : "");
+        row.appendChild(code);
+        const act = document.createElement("span");
+        act.className = "act act-" + f.action;
+        act.textContent = f.action;
+        row.appendChild(act);
+        fs.appendChild(row);
+      }
+      card.appendChild(fs);
+    }
+    section(card, "Steps", p.steps, true);
+    section(card, "Risks", p.risks, false);
+    section(card, "Validation", p.validation, false);
+    const ctx = document.createElement("div");
+    ctx.className = "hint";
+    ctx.textContent = "Konteks: " + (pv.includedPaths.length > 0 ? pv.includedPaths.join(", ") : "—");
+    card.appendChild(ctx);
+    const btns = document.createElement("div");
+    btns.className = "rowbtns";
+    const rebuild = document.createElement("button");
+    rebuild.textContent = "Buat ulang";
+    rebuild.addEventListener("click", () => vscode.postMessage({ type: "planBuild", goal: $("goal").value }));
+    btns.appendChild(rebuild);
+    const clear = document.createElement("button");
+    clear.textContent = "Hapus";
+    clear.addEventListener("click", () => vscode.postMessage({ type: "planClear" }));
+    btns.appendChild(clear);
+    card.appendChild(btns);
+    const buildRow = document.createElement("div");
+    buildRow.className = "rowbtns";
+    const build = document.createElement("button");
+    build.textContent = "Setujui & Build (Phase 4)";
+    build.disabled = true;
+    build.title = "Build engine hadir di Phase 4 — plan tidak mengubah file apapun";
+    buildRow.appendChild(build);
+    card.appendChild(buildRow);
+    out.appendChild(card);
+  }
   sendBtn.addEventListener("click", send);
   inputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   });
   $("clear").addEventListener("click", () => vscode.postMessage({ type: "chatClear" }));
+  $("makeplan").addEventListener("click", () => vscode.postMessage({ type: "planBuild", goal: $("goal").value }));
   providerEl.addEventListener("change", () => vscode.postMessage({ type: "setProvider", provider: providerEl.value }));
   modelEl.addEventListener("change", () => vscode.postMessage({ type: "setModel", model: modelEl.value }));
   refreshBtn.addEventListener("click", () => vscode.postMessage({ type: "refreshModels" }));

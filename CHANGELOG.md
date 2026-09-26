@@ -1,5 +1,19 @@
 # Changelog
 
+## Phase 3: Plan Engine + Context Sufficiency (v1)
+
+- Alur: goal → konteks (manifest auto + relevan) → sufficiency check →
+  inspect-round sekali (baca yang kurang, maks 2) → cek ulang → plan
+- Plan terstruktur: Goal / Current state / Files (read|modify|create + alasan) /
+  Steps / Risks / Validation; parser toleran, tak pernah melempar
+- Badge kejujuran: "Konteks cukup" hijau vs "Konteks belum cukup" + daftar
+  yang belum dibaca + file yang dibaca otomatis + konteks terpakai
+- Approval boundary: tombol Build disabled sampai Phase 4; plan tak ubah file
+- `src/plan/`: types, sufficiency (vertical slice auth, case-insensitive),
+  planner (prompt + parse) — 7 test; terverifikasi ke Ollama asli
+  (7 steps, 2 risks, 3 validation ter-parse)
+- Total 73 tests hijau
+
 ## Phase 2: Project Understanding (read-only)
 
 - Fingerprint deterministik dari manifest (Laravel/Express/Next/Nest/Django/
