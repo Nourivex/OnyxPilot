@@ -1,5 +1,13 @@
 # Changelog
 
+## Ikon activity bar dari trace maskot asli
+
+- `OnyxPilot.svg` (trace Inkscape user) dipakai sebagai basis `onyx-bar.svg`
+- Temuan: trace serba-hitam tak terlihat di bar gelap + viewBox salah
+  (koordinat konten di luar viewBox akibat group transform → render kosong)
+- Perbaikan: cruft dibuang, viewBox ikut koordinat asli, fill → slate `#9DB4D0`
+- Terverifikasi render 24px di background gelap dan terang
+
 ## Ikon benar: SVG untuk bar, PNG untuk marketplace
 
 - Root cause ikon: `viewsContainers.activitybar` VS Code hanya menerima SVG —

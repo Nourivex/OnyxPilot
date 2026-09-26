@@ -10,3 +10,4 @@ src/**
 *.vsix
 # Master logo tetap di repo, tidak perlu ikut ter-package
 resources/OnyxPilot.png
+resources/OnyxPilot.svg

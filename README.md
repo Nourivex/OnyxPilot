@@ -140,8 +140,9 @@ onyx-pilot/
 │   └── ui/                 # output-panel, apply, status-bar
 ├── resources/
 │   ├── OnyxPilot.png      # master: maskot beruang full (jangan dihapus)
-│   ├── onyx-icon.png       # ikon extension/marketplace (transparan, dari master)
-│   └── onyx-bar.svg        # ikon activity bar (SVG sederhana 24px; activity bar wajib SVG, bukan PNG)
+│   ├── OnyxPilot.svg       # master vektor: hasil trace Inkscape (hitam, mentah)
+│   ├── onyx-icon.png       # ikon extension/marketplace (transparan, dari master PNG)
+│   └── onyx-bar.svg        # ikon activity bar: trace maskot, dibersihkan + recolor slate
 ├── docs/plans/             # rencana Day 1 → Day 8+ dan roadmap v1.0
 ├── CHANGELOG.md
 ├── LICENSE (MIT)
@@ -149,9 +150,12 @@ onyx-pilot/
 
 ## Ikon & logo
 
-- Master: `resources/OnyxPilot.png` (maskot beruang full).
-- Butuh ganti logo? Timpa `OnyxPilot.png`, turunkan ulang `onyx-icon.png`
-  (256px, background transparan), dan sederhanakan `onyx-bar.svg` bila bentuk berubah.
+- Master: `resources/OnyxPilot.png` (maskot full) dan `OnyxPilot.svg` (trace vektor mentah).
+- `onyx-bar.svg` diturunkan dari trace: cruft Inkscape dibuang, viewBox disesuaikan
+  koordinat asli, fill hitam diganti slate terang (`#9DB4D0`) agar terbaca di bar
+  gelap maupun terang.
+- Butuh ganti logo? Timpa master, turunkan ulang `onyx-icon.png`
+  (256px, background transparan) dan `onyx-bar.svg`.
   Aturan: activity bar **wajib SVG** (`viewsContainers`), marketplace memakai PNG (`icon`).
 
 ## Roadmap
