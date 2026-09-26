@@ -1,5 +1,15 @@
 # Changelog
 
+## Sidebar Chat/Plan/Build (tahap 1: Chat)
+
+- Sidebar jadi 3 tab: **Chat** penuh, Plan/Build kerangka jujur + quick action
+- Chat read-only: selection + file aktif dikemas sebagai konteks (chip 📎),
+  riwayat 6 putaran, jawaban Bahasa Indonesia, tanpa ubah file
+- Quick actions (Audit/dll) tetap di klik kanan; Setup (provider/parameter)
+  pindah ke collapsible agar Chat lega
+- `src/agent/` baru: `conversation.ts` + `context-pack.ts` (murni + 6 test)
+- Total 46 tests hijau
+
 ## Diff Preview sebelum Apply (fitur utama v0.2)
 
 - Ganti dialog konfirmasi buta → native VS Code diff: kiri file asli,
