@@ -8,3 +8,5 @@ src/**
 **/*.map
 **/*.ts
 *.vsix
+# Master logo tetap di repo, tidak perlu ikut ter-package
+resources/OnyxPilot.png
