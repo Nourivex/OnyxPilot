@@ -1,5 +1,20 @@
 # Changelog
 
+## Ikon maskot beruang (PNG transparan)
+
+- `resources/OnyxPilot.png` (logo asli) → `resources/onyx-icon.png` 256px:
+  background putih di-floodfill jadi transparan (bulu putih aman, tertutup outline),
+  trim + padding, siap activity bar gelap/terang
+- `package.json` icon dialihkan dari SVG ke PNG (render bulletproof, tanpa artefak)
+- Terverifikasi di simulasi 24px: badge heksagon + goggle cyan terbaca
+
+## Ikon onyx.svg dioptimasi agar kebaca
+
+- Diagnosis: file valid + ter-render; masalahnya detail trace super-halus
+  (fragmen pucat) jadi bubur di ukuran 24px + permata gelap menyatu dengan bar gelap
+- Buang 2 path fragmen pucat (#A7BDC9, #C7E2E8), viewBox di-crop ketat ke permata
+- Artwork asli dipertahankan (7 path: basal gelap + faset teal/cyan sebagai elemen baca)
+
 ## OpenAI-compatible matang (9router) + repo rapi
 
 - Diagnosis 9router lokal: butuh baseURL diakhiri `/v1` + apiKey asli
