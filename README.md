@@ -66,6 +66,7 @@ Setiap mengubah `package.json` (command, view, settings), **restart host**
 | `npm run watch` | Kompilasi otomatis tiap file berubah |
 | `npm test` | Unit test (Vitest) |
 | `npm run lint` / `lint:fix` | Cek / perbaiki gaya kode (ESLint) |
+| `npm run icon` | Build `onyx-bar.svg` dari `OnyxPilot.svg` |
 | `npm run package` | Build `onyx-pilot-<versi>.vsix` siap install |
 
 Standar kode: TypeScript `strict`, logika murni dipisah dari API VS Code
@@ -154,6 +155,15 @@ onyx-pilot/
 - `onyx-bar.svg` diturunkan dari trace: cruft Inkscape dibuang, viewBox disesuaikan
   koordinat asli, fill hitam diganti slate terang (`#9DB4D0`) agar terbaca di bar
   gelap maupun terang.
+- **Workflow baru (satu command):** edit bebas `OnyxPilot.svg` di Inkscape
+  (warna/isi apapun), lalu jalankan:
+
+  ```bash
+  npm run icon   # OnyxPilot.svg -> onyx-bar.svg (sanitize + viewBox pas + validasi)
+  ```
+
+  lalu `F5` untuk cek di VS Code. Skrip mempertahankan artwork 1:1 (tidak recolor),
+  hanya merapikan struktur + membetulkan viewBox + validasi XML.
 - Butuh ganti logo? Timpa master, turunkan ulang `onyx-icon.png`
   (256px, background transparan) dan `onyx-bar.svg`.
   Aturan: activity bar **wajib SVG** (`viewsContainers`), marketplace memakai PNG (`icon`).

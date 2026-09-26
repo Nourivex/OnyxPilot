@@ -1,5 +1,12 @@
 # Changelog
 
+## Satu command build ikon (`npm run icon`)
+
+- `scripts/build-icon.py`: `OnyxPilot.svg` (kondisi apapun) → `onyx-bar.svg`
+  bersih + viewBox otomatis dari bbox isi (termasuk offset translate)
+  + validasi XML; artwork/warna user dipertahankan 1:1
+- Terverifikasi render 24px di background gelap dan terang
+
 ## Ikon activity bar dari trace maskot asli
 
 - `OnyxPilot.svg` (trace Inkscape user) dipakai sebagai basis `onyx-bar.svg`
