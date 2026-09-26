@@ -20,9 +20,10 @@ Asisten AI coding di dalam VS Code: blok kode → klik kanan → **Onyx AI**
   (`ollama list` / `/models`), tanpa ketik manual
 - **Parameter Ollama manual**: think on/off, temperature, max tokens
 - **Sidebar modern**: ikon activity bar, status koneksi, info selection, tombol aksi
-- **Apply aman**: Create menempel di posisi kursor, Improve mengganti selection —
-  selalu diawali dialog konfirmasi (undo tetap `Ctrl+Z`)
-- **Ngoprek-friendly**: TypeScript strict, ESLint, Vitest (36 tests), rencana di `docs/plans/`
+- **Diff Preview sebelum Apply**: Create/Improve membuka diff native VS Code
+  (kiri file asli, kanan hasil AI dalam konteks penuh) → **Apply / Reject**,
+  satu undo step
+- **Ngoprek-friendly**: TypeScript strict, ESLint, Vitest (40 tests), rencana di `docs/plans/`
 
 ## Prasyarat
 
@@ -79,8 +80,8 @@ agar bisa di-unit-test (pola: `context-types.ts`, `protocol.ts`, `models.ts`,
 2. Klik kanan → **Onyx AI** → pilih aksi, atau klik tombol di sidebar
 3. Improve menanyakan fokus perbaikan (Enter = general improve, Esc = batal),
    Create menanyakan instruksi
-4. Hasil tampil di panel Output; untuk Create/Improve muncul dialog
-   **Tempel / Batal** → kode masuk ke file di posisi semula
+4. Hasil tampil di panel Output; untuk Create/Improve terbuka Diff Preview
+   (kiri asli, kanan hasil AI) → **Apply / Reject**
 
 Jalan pintas lain:
 
@@ -94,7 +95,7 @@ Jalan pintas lain:
 | Setting | Default | Keterangan |
 |---|---|---|
 | `onyxPilot.provider` | `ollama` | `ollama` atau `openai-compatible` |
-| `onyxPilot.confirmApply` | `true` | Dialog konfirmasi sebelum kode ditempel (`false` = sekali klik, undo `Ctrl+Z`) |
+| `onyxPilot.confirmApply` | `true` | Tampilkan Diff Preview + Apply/Reject sebelum kode ditempel (`false` = sekali klik langsung, undo `Ctrl+Z`) |
 | `onyxPilot.ollama.endpoint` | `http://localhost:11434` | Alamat Ollama |
 | `onyxPilot.ollama.model` | `qwen3:8b` | Ganti ke model hasil `ollama list` |
 | `onyxPilot.ollama.think` | `true` | `false` = jawaban langsung tanpa reasoning (hemat token, disarankan untuk model thinking) |

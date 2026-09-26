@@ -1,38 +1,75 @@
 import * as vscode from "vscode";
-import {
-  insertAtTarget,
-  replaceAtTarget,
-  type EditTarget
-} from "../context/edit-target";
+import type { EditTarget } from "../context/edit-target";
+import { spliceText } from "./diff-text";
+import { showDiffPreview } from "./diff";
 import { showError } from "./output-panel";
 
-function lines(code: string): number {
-  return code.split("\n").length;
+/**
+ * Apply via Diff Preview (menggantikan dialog konfirmasi buta):
+ * user melihat perubahan dalam konteks file (native VS Code diff),
+ * lalu Apply / Reject. `confirmApply=false` = terapkan langsung.
+ * Yang di-apply = isi dokumen hasil preview (satu undo step).
+ */
+
+async function openTargetDoc(
+  target: EditTarget
+): Promise<vscode.TextDocument | undefined> {
+  try {
+    return await vscode.workspace.openTextDocument(target.uri);
+  } catch (err) {
+    showError(
+      `File target tidak bisa dibuka: ${err instanceof Error ? err.message : String(err)}`
+    );
+    return undefined;
+  }
 }
 
-function selectionLines(target: EditTarget): number {
-  const s = target.selection;
-  return s.isEmpty ? 0 : s.end.line - s.start.line + 1;
-}
-
-async function confirmed(message: string): Promise<boolean> {
-  const skip =
+function skipPreview(): boolean {
+  return (
     vscode.workspace
       .getConfiguration("onyxPilot")
-      .get<boolean>("confirmApply", true) === false;
-  if (skip) {
-    return true;
-  }
-  const pick = await vscode.window.showInformationMessage(
-    message,
-    { modal: true },
-    "Tempel",
-    "Batal"
+      .get<boolean>("confirmApply", true) === false
   );
-  return pick === "Tempel";
 }
 
-/** Create: tempel kode di posisi kursor file target. */
+async function applyModified(
+  action: "Create" | "Improve",
+  target: EditTarget,
+  doc: vscode.TextDocument,
+  modified: string
+): Promise<void> {
+  if (!skipPreview()) {
+    const decision = await showDiffPreview(
+      target.uri,
+      modified,
+      doc.languageId,
+      action
+    );
+    if (decision !== "apply") {
+      void vscode.window.showInformationMessage(
+        `Onyx AI: ${action} dibatalkan, file tidak diubah.`
+      );
+      return;
+    }
+  }
+  try {
+    const editor = await vscode.window.showTextDocument(doc);
+    const full = new vscode.Range(
+      doc.positionAt(0),
+      doc.positionAt(doc.getText().length)
+    );
+    await editor.edit((b) => b.replace(full, modified));
+    void vscode.window.showInformationMessage(
+      `Onyx AI: ${action} diterapkan ke ${target.fileLabel} (Ctrl+Z untuk undo).`
+    );
+  } catch (err) {
+    showError(
+      `Gagal menerapkan: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
+
+/** Create: sisipkan kode di posisi kursor, preview seluruh dokumen. */
 export async function applyCreate(
   target: EditTarget,
   code: string
@@ -41,25 +78,15 @@ export async function applyCreate(
     showError("Tidak ada kode untuk ditempel.");
     return;
   }
-  const ok = await confirmed(
-    `Onyx AI — Create: tempel ${lines(code)} baris ke ${target.fileLabel}?`
-  );
-  if (!ok) {
+  const doc = await openTargetDoc(target);
+  if (!doc) {
     return;
   }
-  try {
-    await insertAtTarget(target, code);
-    void vscode.window.showInformationMessage(
-      `Onyx AI: kode ditempel ke ${target.fileLabel} (Ctrl+Z untuk undo).`
-    );
-  } catch (err) {
-    showError(
-      `Gagal menempel: ${err instanceof Error ? err.message : String(err)}`
-    );
-  }
+  const off = doc.offsetAt(target.selection.active);
+  await applyModified("Create", target, doc, spliceText(doc.getText(), off, off, code));
 }
 
-/** Improve: ganti selection dengan kode hasil AI. */
+/** Improve: ganti selection (atau sisip bila kosong), preview seluruh dokumen. */
 export async function applyImprove(
   target: EditTarget,
   code: string
@@ -68,23 +95,17 @@ export async function applyImprove(
     showError("Tidak ada kode untuk ditempel.");
     return;
   }
-  const sel = selectionLines(target);
-  const ok = await confirmed(
-    sel > 0
-      ? `Onyx AI — Improve: ganti ${sel} baris selection dengan ${lines(code)} baris di ${target.fileLabel}?`
-      : `Onyx AI — Improve: tempel ${lines(code)} baris ke ${target.fileLabel}?`
-  );
-  if (!ok) {
+  const doc = await openTargetDoc(target);
+  if (!doc) {
     return;
   }
-  try {
-    await replaceAtTarget(target, code);
-    void vscode.window.showInformationMessage(
-      `Onyx AI: kode ditempel ke ${target.fileLabel} (Ctrl+Z untuk undo).`
-    );
-  } catch (err) {
-    showError(
-      `Gagal menempel: ${err instanceof Error ? err.message : String(err)}`
-    );
-  }
+  const s = target.selection;
+  const start = doc.offsetAt(s.start);
+  const end = s.isEmpty ? start : doc.offsetAt(s.end);
+  await applyModified(
+    "Improve",
+    target,
+    doc,
+    spliceText(doc.getText(), start, end, code)
+  );
 }

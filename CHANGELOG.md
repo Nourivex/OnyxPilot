@@ -1,5 +1,15 @@
 # Changelog
 
+## Diff Preview sebelum Apply (fitur utama v0.2)
+
+- Ganti dialog konfirmasi buta → native VS Code diff: kiri file asli,
+  kanan dokumen penuh berisi hasil AI (konteks file utuh, bukan snippet)
+- Alur: AI → Diff Preview → **Apply / Reject** (dismiss = reject, file utuh)
+- Apply = satu edit pengganti seluruh dokumen hasil preview (satu undo step)
+- `confirmApply=false` tetap didukung: terapkan langsung tanpa preview
+- `src/ui/diff.ts` (vscode) + `src/ui/diff-text.ts` murni (`spliceText`) + 4 test
+- Total 40 tests hijau
+
 ## Satu command build ikon (`npm run icon`)
 
 - `scripts/build-icon.py`: `OnyxPilot.svg` (kondisi apapun) → `onyx-bar.svg`
